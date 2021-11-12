@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 
-import './App.css';
 import { draw } from './draw';
 
 export function App() {
