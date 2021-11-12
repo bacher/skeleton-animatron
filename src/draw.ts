@@ -3,7 +3,9 @@ import dat from 'dat.gui';
 import { interpolatePoint } from './utils';
 
 const bonesRotation = {
-  angle: 0,
+  angleX: 0,
+  angleY: 0,
+  angleZ: 0,
 };
 
 const boneRotations = {
@@ -26,7 +28,9 @@ bonesDir.open();
 for (const boneRotation of Object.keys(boneRotations)) {
   bonesDir.add(boneRotations, boneRotation, -1, 1, 0.01);
 }
-bonesDir.add(bonesRotation, 'angle', -2, 2, 0.01);
+bonesDir.add(bonesRotation, 'angleX', -1, 1, 0.01);
+bonesDir.add(bonesRotation, 'angleY', -1, 1, 0.01);
+bonesDir.add(bonesRotation, 'angleZ', -1, 1, 0.01);
 
 const sceneDir = gui.addFolder('Scene');
 sceneDir.open();
@@ -35,15 +39,15 @@ sceneDir.add(scene, 'showInterpolation');
 
 const model = {
   vertexes: [
-    [-1, 0],
-    [0, 5],
-    [0, 10],
-    [2, 15],
-    [4, 20],
-    [0, 25],
-    [-5, 30],
-    [-20, 35],
-  ],
+    [-1, 0, 0],
+    [0, 5, 0],
+    [0, 10, 0],
+    [2, 15, 0],
+    [4, 20, 0],
+    [0, 25, 0],
+    [-5, 30, 0],
+    [-20, 35, 0],
+  ] as vec3[],
   weights: [
     [1, 0, 0, 0, 0, 0],
     [0.3, 0.7, 0, 0, 0, 0],
@@ -100,10 +104,10 @@ export function draw(ctx: CanvasRenderingContext2D) {
   ctx.stroke();
 
   for (const vertex of model.vertexes) {
-    ctx.beginPath();
     const x = vertex[0];
     const y = vertex[1];
 
+    ctx.beginPath();
     ctx.moveTo(x - 1, y);
     ctx.lineTo(x + 1, y);
     ctx.moveTo(x, y - 1);
@@ -113,8 +117,6 @@ export function draw(ctx: CanvasRenderingContext2D) {
 
   const pose: {
     bones: {
-      rotation: number;
-      accumulatedRotation: number;
       accumulatedRotationMat: mat4;
       mat: mat4;
       finalMat: mat4;
@@ -124,22 +126,26 @@ export function draw(ctx: CanvasRenderingContext2D) {
     bones: [],
   };
 
-  let accumulatedRotation = 0;
-  for (const angle of Object.values(boneRotations)) {
-    const rotation = angle * Math.PI + bonesRotation.angle;
+  const accumulatedRotationMat = mat4.create();
+
+  for (const angleZ of Object.values(boneRotations)) {
+    const rotationMat = mat4.create();
+    mat4.rotateZ(
+      rotationMat,
+      rotationMat,
+      angleZ * Math.PI + bonesRotation.angleZ * Math.PI,
+    );
+    mat4.rotateY(rotationMat, rotationMat, bonesRotation.angleY * Math.PI);
+    mat4.rotateX(rotationMat, rotationMat, bonesRotation.angleX * Math.PI);
+
     pose.bones.push({
-      rotation,
-      accumulatedRotation,
-      accumulatedRotationMat: mat4.fromZRotation(
-        mat4.create(),
-        accumulatedRotation,
-      ),
-      mat: mat4.fromZRotation(mat4.create(), rotation),
+      accumulatedRotationMat: mat4.clone(accumulatedRotationMat),
+      mat: rotationMat,
       finalMat: undefined as any,
       finalCoords: undefined as any,
     });
 
-    accumulatedRotation += rotation;
+    mat4.multiply(accumulatedRotationMat, accumulatedRotationMat, rotationMat);
   }
 
   const acc = mat4.create();
@@ -213,7 +219,7 @@ export function draw(ctx: CanvasRenderingContext2D) {
 
   ctx.fillStyle = '#f00';
   for (let v = 0; v < model.vertexes.length; v++) {
-    const vertex = [...model.vertexes[v], 0] as vec3;
+    const vertex = model.vertexes[v];
     const weights = model.weights[v];
 
     const variants = [];
@@ -253,7 +259,7 @@ export function draw(ctx: CanvasRenderingContext2D) {
         ctx.stroke();
       }
 
-      coords = interpolatePoint(variants, v === 1);
+      coords = interpolatePoint(variants);
     }
 
     ctx.beginPath();

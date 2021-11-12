@@ -2,7 +2,6 @@ import { vec3 } from 'gl-matrix';
 
 export function interpolatePoint(
   points: { coords: vec3; weight: number }[],
-  debug: boolean,
 ): vec3 {
   let acc = points[0];
 
@@ -10,10 +9,6 @@ export function interpolatePoint(
     const { coords, weight } = points[i];
 
     const newCoords: vec3 = [0, 0, 0];
-
-    if (debug) {
-      debugger;
-    }
 
     for (let j = 0; j < 3; j++) {
       const v = acc.coords[j];
